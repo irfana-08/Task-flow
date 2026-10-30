@@ -2,7 +2,7 @@
 
 A responsive To-Do List web application built with **HTML5**, **CSS3**, and **Modern JavaScript (ES6+)**.
 
-## ✨ Key Features
+##  Key Features
 
 1. **Google Authentication**:
    - Each user has their own isolated To-Do list.
@@ -37,7 +37,7 @@ A responsive To-Do List web application built with **HTML5**, **CSS3**, and **Mo
    - **Direct Disk Save**: Uses the modern File System Access API to save or sync directly to a file on disk (when supported).
    - **Quick Toolbar Buttons**: 1-click "Export to Excel" and "Import from Excel" right on the main toolbar.
 
-6. **✅ Dedicated Completed Tasks Viewing & Archive**:
+6. ** Dedicated Completed Tasks Viewing & Archive**:
    - **Interactive Completed Stat Card**: Click the `✅ Completed` card at the top to instantly view finished works.
    - **Completed Tasks Archive Modal**: Click `✅ Completed` in the header to open an archive drawer showing:
      - Completion statistics (Total completed, on-time vs overdue).
