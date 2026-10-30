@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>TaskFlow - Google Auth & Urgency To-Do List</title>
+  <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVUBM0tXxqiiRCmZV4Ugqlsc-lIMeJMKBvDhr5zDzLd3wTyOac_pTYNOw&s=10"
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Firebase SDK (Compat CDN for easy client-side Google Auth) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <span>TaskFlow</span>
+      </div>
+
+      <div class="header-actions">
+        <!-- Excel Database Button -->
+        <button id="btnExcelDbModal" class="header-action-btn btn-excel-trigger" title="Excel Database Manager - Export/Import .xlsx">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+          </svg>
+          <span>Excel DB</span>
+        </button>
+
+        <!-- View Completed Tasks Button -->
+        <button id="btnCompletedModal" class="header-action-btn btn-completed-trigger" title="View Completed Tasks Archive">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <span>Completed</span>
+          <span id="headerCompletedCount" class="header-badge">0</span>
+        </button>
+
+        <!-- Google Auth Settings Button -->
+        <button id="btnSettingsModal" class="theme-btn" title="Firebase / Google Auth Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+
+        <!-- Theme Toggle Button -->
+        <button id="themeToggleBtn" class="theme-btn" title="Toggle Light / Dark Theme">
+          <span id="themeIcon">☀️</span>
+        </button>
+
+        <!-- Dynamic Auth Section -->
+        <div id="authSection" class="auth-container">
+          <!-- Populated by auth.js -->
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-wrapper">
+
+    <!-- Guest Banner (Shown when logged out) -->
+    <div id="authGateBanner" class="auth-gate-banner" style="display: none;">
+      <div class="auth-gate-icon">🔐</div>
+      <h2>Personalized To-Do Lists with Google Sign-In</h2>
+      <p>Sign in with your Google account to create, manage, and color-code your tasks with automatic deadline urgency.</p>
+      
+      <div class="auth-options">
+        <button id="bannerGoogleSignInBtn" class="btn-google-signin">
+          <svg viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.28 14.27A7.03 7.03 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.94 11.94 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard Statistics -->
+    <section class="stats-grid" id="statsSection">
+      <div class="stat-card interactive" id="cardStatTotal" title="Click to view all tasks" data-filter-target="all">
+        <div class="stat-icon total">📋</div>
+        <div class="stat-info">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-label">Total Works</span>
+        </div>
+      </div>
+
+      <div class="stat-card interactive" id="cardStatUrgent" title="Click to filter urgent tasks (< 3 Days)" data-filter-target="urgent">
+        <div class="stat-icon urgent">🚨</div>
+        <div class="stat-info">
+          <span class="stat-value" id="statUrgent">0</span>
+          <span class="stat-label">Urgent (&lt; 3 Days)</span>
+        </div>
+      </div>
+
+      <div class="stat-card interactive" id="cardStatMedium" title="Click to filter upcoming tasks (3-10 Days)" data-filter-target="medium">
+        <div class="stat-icon medium">📅</div>
+        <div class="stat-info">
+          <span class="stat-value" id="statMedium">0</span>
+          <span class="stat-label">Upcoming (3-10 Days)</span>
+        </div>
+      </div>
+
+      <div class="stat-card interactive" id="cardStatLater" title="Click to filter later tasks (> 10 Days)" data-filter-target="later">
+        <div class="stat-icon later">⏳</div>
+        <div class="stat-info">
+          <span class="stat-value" id="statLater">0</span>
+          <span class="stat-label">Later (&gt; 10 Days)</span>
+        </div>
+      </div>
+
+      <div class="stat-card interactive stat-card-completed" id="cardStatCompleted" title="Click to view all completed tasks" data-filter-target="completed">
+        <div class="stat-icon done">✅</div>
+        <div class="stat-info">
+          <span class="stat-value" id="statCompleted">0</span>
+          <span class="stat-label">Completed <small class="click-hint">view ↗</small></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Urgency Legend Guide -->
+    <div class="urgency-legend">
+      <div class="legend-title">
+        <span>⚡ Urgency Highlighting Rules:</span>
+      </div>
+      <div class="legend-items">
+        <div class="legend-item">
+          <span class="legend-dot red"></span>
+          <span>&lt; 3 Days: <strong>Urgent (Red)</strong></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot blue"></span>
+          <span>&gt; 3 to 10 Days: <strong>Upcoming (Blue)</strong></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot yellow"></span>
+          <span>&gt; 10 Days: <strong>Later (Yellow)</strong></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot green"></span>
+          <span>Done: <strong>Completed (Green)</strong></span>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Filter & Search Toolbar -->
+    <section class="toolbar-card">
+      <div class="toolbar-top">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" class="search-input" placeholder="Search tasks by name or notes...">
+        </div>
+
+        <div class="sort-box">
+          <label for="sortSelect" style="font-size: 0.82rem; color: var(--text-muted); font-weight: 500;">Sort By:</label>
+          <select id="sortSelect" class="sort-select">
+            <option value="deadline-asc">⏰ Deadline: Soonest First</option>
+            <option value="deadline-desc">⏰ Deadline: Latest First</option>
+            <option value="created-desc">📅 Created: Newest First</option>
+            <option value="created-asc">📅 Created: Oldest First</option>
+            <option value="title-asc">🔤 Title (A to Z)</option>
+          </select>
+        </div>
+
+        <div class="toolbar-quick-actions">
+          <button id="btnQuickExportExcel" class="btn-quick-excel" title="Quick Export Database to Excel (.xlsx)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Export Excel</span>
+          </button>
+          <button id="btnQuickImportExcel" class="btn-quick-excel" title="Import / Load Tasks from Excel (.xlsx, .xls, .csv)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            </svg>
+            <span>Import Excel</span>
+          </button>
+          <input type="file" id="quickExcelFileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+        </div>
+      </div>
+
+      <div class="filter-pills">
+        <button class="filter-btn active" data-filter="all">All Tasks</button>
+        <button class="filter-btn filter-urgent" data-filter="urgent">🚨 Urgent (&lt; 3 Days)</button>
+        <button class="filter-btn filter-medium" data-filter="medium">📅 Upcoming (3-10 Days)</button>
+        <button class="filter-btn filter-later" data-filter="later">⏳ Later (&gt; 10 Days)</button>
+        <button class="filter-btn" data-filter="active">⏳ Active</button>
+        <button class="filter-btn filter-completed" data-filter="completed">✅ Completed (<span id="filterCompletedCount">0</span>)</button>
+      </div>
+    </section>
+
+    <!-- Dedicated Completed Tasks Archive Banner (shown when viewing completed) -->
+    <div id="completedViewBanner" class="completed-view-banner" style="display: none;">
+      <div class="completed-banner-left">
+        <div class="completed-banner-icon">✅</div>
+        <div>
+          <h4>Completed Tasks Archive (<span id="bannerCompletedCount">0</span>)</h4>
+          <p id="completedBannerSubtitle">Viewing finished deliverables. You can review completion dates, restore tasks, or export archive to Excel.</p>
+        </div>
+      </div>
+      <div class="completed-banner-right">
+        <button id="btnExportCompletedBanner" class="btn-banner-action" title="Export completed tasks to Excel">
+          📊 Export Completed to Excel
+        </button>
+        <button id="btnClearCompletedBanner" class="btn-banner-action danger" title="Clear all completed tasks">
+          🗑️ Clear Completed
+        </button>
+        <button id="btnExitCompletedBanner" class="btn-banner-action secondary" title="Switch back to active tasks">
+          ← View Active Tasks
+        </button>
+      </div>
+    </div>
+
+    <!-- Task List View -->
+    <section id="taskList" class="task-list">
+      <!-- Tasks rendered dynamically by app.js -->
+    </section>
+
+    <!-- Empty State Container -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-icon">📝</div>
+      <h4 id="emptyStateTitle">No tasks found</h4>
+      <p id="emptyStateDesc">Add a new work item above with a deadline to get started!</p>
+    </div>
+
+  </main>
+
+  <!-- Edit Task Modal -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Edit Work / Task</h3>
+        <button class="modal-close-btn" id="closeEditModalBtn">&times;</button>
+      </div>
+      <form id="editForm">
+        <div class="modal-body">
+          <input type="hidden" id="editTaskId">
+          <div class="form-group">
+            <label for="editTitleInput">Title <span class="req-badge">*</span></label>
+            <input type="text" id="editTitleInput" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="editDeadlineInput">Deadline <span class="req-badge">* (Required)</span></label>
+            <input type="datetime-local" id="editDeadlineInput" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="editNotesInput">Notes / Details</label>
+            <textarea id="editNotesInput" class="form-textarea"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
+          <button type="submit" class="btn-primary">Update Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<center>
+    <!-- Create Work / Task Form -->
+    <section class="task-form-card">
+      <div class="form-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add New Work / Task
+        </h3>
+      </div>
+
+      <form id="taskForm" autocomplete="off">
+        <div class="form-grid">
+          <!-- Task Title -->
+          <div class="form-group form-group-full">
+            <label for="taskTitleInput">Work / Task Title <span class="req-badge">*</span></label>
+            <input type="text" id="taskTitleInput" class="form-input" placeholder="e.g., Finalize project report, Submit assignment..." required>
+          </div>
+
+          <!-- Deadline Input (Mandatory) -->
+          <div class="form-group">
+            <label for="taskDeadlineInput">Deadline <span class="req-badge">* (Required)</span></label>
+            <input type="datetime-local" id="taskDeadlineInput" class="form-input" required>
+            
+            <div class="quick-deadlines">
+              <span>Quick set:</span>
+              <button type="button" class="btn-quick-date" data-days="1">+1 Day (Urgent)</button>
+              <button type="button" class="btn-quick-date" data-days="2">+2 Days (Urgent)</button>
+              <button type="button" class="btn-quick-date" data-days="5">+5 Days (Blue)</button>
+              <button type="button" class="btn-quick-date" data-days="14">+14 Days (Yellow)</button>
+            </div>
+          </div>
+
+          <!-- Optional Notes / Category -->
+          <div class="form-group">
+            <label for="taskNotesInput">Additional Notes / Details</label>
+            <textarea id="taskNotesInput" class="form-textarea" placeholder="Key deliverables, links, or instructions..."></textarea>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="form-actions">
+            <button type="submit" class="btn-submit-task" id="btnSubmitTask">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Save &amp; Add Task
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+</center>
+  <!-- Firebase / Google Auth Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>⚙️ Google Authentication Settings</h3>
+        <button class="modal-close-btn" id="closeSettingsModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; background: var(--bg-hover); padding: 0.9rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <strong style="color: var(--text-primary); display: block; margin-bottom: 0.35rem;">How to get your free Google Sign-In keys:</strong>
+          <ol style="padding-left: 1.25rem; margin-bottom: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
+            <li>Go to <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary-accent); text-decoration: underline;">Firebase Console</a> and click <strong>Create a project</strong>.</li>
+            <li>Go to <strong>Authentication</strong> &rarr; <strong>Sign-in method</strong> &rarr; Enable <strong>Google</strong>.</li>
+            <li>Go to <strong>Project Settings (⚙️)</strong> &rarr; Scroll to <strong>Your apps</strong> &rarr; Click <strong>Web (&lt;/&gt;)</strong>.</li>
+            <li>Copy the <code>firebaseConfig</code> code snippet and paste it below.</li>
+          </ol>
+          <span style="font-size: 0.8rem; color: var(--text-muted);"><em>Tip: You can paste either pure JSON or the direct JavaScript snippet!</em></span>
+        </div>
+
+        <div class="form-group">
+          <label for="firebaseConfigInput">Firebase Config (JSON format):</label>
+          <textarea id="firebaseConfigInput" class="form-textarea" rows="6" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-app.firebaseapp.com",
+  "projectId": "your-app-id",
+  "storageBucket": "your-app.appspot.com",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="resetFirebaseBtn">Clear Config</button>
+        <button type="button" class="btn-primary" id="saveFirebaseBtn">Save &amp; Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excel Database Hub Modal -->
+  <div id="excelModal" class="modal-overlay">
+    <div class="modal-box modal-box-large">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-header-icon excel-icon">📊</span>
+          <div>
+            <h3>Excel Database Hub</h3>
+            <p class="modal-subtitle">Use Microsoft Excel (.xlsx) as your portable database to store, backup, and restore tasks</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeExcelModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Database Status Summary -->
+        <div class="excel-db-status">
+          <div class="db-status-item">
+            <span class="db-status-label">Database Status</span>
+            <span class="db-status-val online">🟢 Ready &amp; Connected</span>
+          </div>
+          <div class="db-status-item">
+            <span class="db-status-label">Stored Tasks</span>
+            <span class="db-status-val" id="excelDbTaskCount">0 tasks (0 completed)</span>
+          </div>
+          <div class="db-status-item">
+            <span class="db-status-label">Storage Engine</span>
+            <span class="db-status-val">SheetJS (.xlsx) + LocalStorage</span>
+          </div>
+        </div>
+
+        <!-- Section 1: Export Database to Excel -->
+        <div class="excel-card">
+          <div class="excel-card-header">
+            <div class="excel-card-title">
+              <span class="excel-badge export">📥 EXPORT</span>
+              <h4>Save Database to Excel (.xlsx)</h4>
+            </div>
+            <span class="excel-card-desc">Downloads a complete multi-sheet workbook including All Tasks, Completed Archive, and Overview statistics.</span>
+          </div>
+          
+          <div class="excel-sheets-preview">
+            <span class="sheet-pill">📑 Sheet 1: All Tasks</span>
+            <span class="sheet-pill">📑 Sheet 2: Completed Archive</span>
+            <span class="sheet-pill">📑 Sheet 3: Database Overview</span>
+          </div>
+
+          <div class="excel-actions-row">
+            <button id="btnExportExcelMain" class="btn-excel-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download Excel Database (.xlsx)
+            </button>
+            
+            <button id="btnSaveLocalDiskExcel" class="btn-excel-secondary" title="Save directly to a selected file on disk using File System API">
+              💾 Save to Local File
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 2: Import Database from Excel -->
+        <div class="excel-card">
+          <div class="excel-card-header">
+            <div class="excel-card-title">
+              <span class="excel-badge import">📤 IMPORT</span>
+              <h4>Load Database from Excel (.xlsx, .xls, .csv)</h4>
+            </div>
+            <span class="excel-card-desc">Upload or select any Excel spreadsheet to load tasks into TaskFlow. Works with TaskFlow exports or custom spreadsheets with Title &amp; Deadline.</span>
+          </div>
+
+          <!-- Upload Drag & Drop Area -->
+          <div class="excel-dropzone" id="excelDropZone">
+            <div class="dropzone-content" id="dropzonePrompt">
+              <span class="dropzone-icon">📁</span>
+              <div class="dropzone-text">
+                <strong>Choose an Excel file</strong> or drag &amp; drop it here
+                <span class="dropzone-sub">Supports .xlsx, .xls, and .csv formats</span>
+              </div>
+              <button type="button" class="btn-browse-file" id="btnBrowseExcel">Browse Files</button>
+              <input type="file" id="excelModalFileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+            </div>
+            <div id="dropzoneSelectedFile" class="dropzone-selected" style="display: none;">
+              <span class="file-icon">📊</span>
+              <span class="file-name" id="selectedExcelFileName">filename.xlsx</span>
+              <button type="button" class="file-remove-btn" id="btnRemoveSelectedFile" title="Remove selected file">&times;</button>
+            </div>
+          </div>
+
+          <!-- Import Mode Radio -->
+          <div class="import-options">
+            <label class="import-radio-label">
+              <input type="radio" name="importMode" value="merge" checked>
+              <span class="radio-custom"></span>
+              <span class="radio-text">
+                <strong>Merge with current tasks</strong>
+                <small>Adds new tasks and keeps existing items (safe &amp; recommended)</small>
+              </span>
+            </label>
+
+            <label class="import-radio-label">
+              <input type="radio" name="importMode" value="replace">
+              <span class="radio-custom"></span>
+              <span class="radio-text">
+                <strong>Replace entire database</strong>
+                <small>Overwrites current tasks with the contents of the Excel file</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="excel-actions-row">
+            <button id="btnExecuteImportExcel" class="btn-excel-primary" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              </svg>
+              Import &amp; Restore Tasks
+            </button>
+          </div>
+        </div>
+
+        <!-- Auto Backup Preference -->
+        <div class="excel-preferences">
+          <label class="pref-checkbox-label">
+            <input type="checkbox" id="chkAutoExcelPrompt">
+            <span class="chk-custom"></span>
+            <span>Notify me to download an updated Excel database backup after adding or completing tasks</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="closeExcelModalFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Completed Tasks Archive Modal -->
+  <div id="completedTasksModal" class="modal-overlay">
+    <div class="modal-box modal-box-large">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-header-icon done-icon">✅</span>
+          <div>
+            <h3>Completed Tasks Archive</h3>
+            <p class="modal-subtitle">Review finished tasks, check completion dates, restore tasks, or export archive</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeCompletedModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Completed Stats Bar -->
+        <div class="completed-summary-bar">
+          <div class="completed-metric">
+            <span class="metric-num" id="modalCompletedTotal">0</span>
+            <span class="metric-lbl">Total Completed</span>
+          </div>
+          <div class="completed-metric">
+            <span class="metric-num text-success" id="modalCompletedOnTime">0</span>
+            <span class="metric-lbl">Completed On Time</span>
+          </div>
+          <div class="completed-metric">
+            <span class="metric-num text-warning" id="modalCompletedOverdue">0</span>
+            <span class="metric-lbl">Completed Past Deadline</span>
+          </div>
+        </div>
+
+        <!-- Search Completed Filter -->
+        <div class="completed-search-row">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="completedModalSearchInput" class="search-input" placeholder="Search completed tasks by title or notes...">
+          </div>
+        </div>
+
+        <!-- Completed Tasks List Container -->
+        <div id="completedModalList" class="completed-modal-list">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Empty State in Modal -->
+        <div id="completedModalEmpty" class="empty-state" style="display: none; padding: 2rem 1rem;">
+          <div class="empty-icon">🎉</div>
+          <h4>No completed tasks yet</h4>
+          <p>When you finish tasks and check them off, they will be archived here!</p>
+        </div>
+      </div>
+
+      <div class="modal-footer modal-footer-split">
+        <div class="footer-left-actions">
+          <button type="button" id="btnModalExportCompletedExcel" class="btn-secondary">
+            📊 Export Completed to Excel
+          </button>
+          <button type="button" id="btnModalClearCompleted" class="btn-danger-outline">
+            🗑️ Clear All Completed
+          </button>
+        </div>
+        <button type="button" class="btn-secondary" id="closeCompletedModalFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="confirmModalTitle">Confirm Action</h3>
+        <button class="modal-close-btn" id="closeConfirmModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmModalMessage" style="color: var(--text-secondary); line-height: 1.5;"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelConfirmBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="acceptConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Core Scripts -->
+  <script src="xlsx.full.min.js"></script>
+  <script>
+    if (typeof window.XLSX === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
+  <script src="excel-db.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
